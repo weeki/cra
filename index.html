@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRA Notification Simulator</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-soft: #111c34;
+      --panel: #ffffff;
+      --panel-soft: #f8fafc;
+      --text: #0f172a;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --blue: #2563eb;
+      --blue-soft: #dbeafe;
+      --green: #059669;
+      --green-soft: #d1fae5;
+      --amber: #d97706;
+      --amber-soft: #fef3c7;
+      --red: #dc2626;
+      --red-soft: #fee2e2;
+      --purple: #7c3aed;
+      --purple-soft: #ede9fe;
+      --gray-soft: #f1f5f9;
+      --shadow: 0 24px 80px rgba(15, 23, 42, 0.18);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: auto; }
+
+    /* Prevent dynamic preview/validation panels from stealing the browser scroll anchor. */
+    body, .page, .panel, .dashboard, .side-stack, .validation-list, .preview, pre {
+      overflow-anchor: none;
+    }
+
+    .field-list, .field-card, input, textarea, select {
+      overflow-anchor: auto;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 0%, rgba(37, 99, 235, 0.24), transparent 28%),
+        radial-gradient(circle at 90% 5%, rgba(124, 58, 237, 0.18), transparent 30%),
+        linear-gradient(180deg, var(--bg) 0%, #172554 38%, #f8fafc 38%, #f8fafc 100%);
+      min-height: 100vh;
+    }
+
+    .page {
+      width: min(1280px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 40px 0 56px;
+    }
+
+    header {
+      color: #ffffff;
+      padding: 28px 0 30px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(8px);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    h1 {
+      margin: 18px 0 12px;
+      font-size: clamp(34px, 5vw, 62px);
+      line-height: 0.98;
+      letter-spacing: -0.055em;
+    }
+
+    .subtitle {
+      max-width: 900px;
+      margin: 0;
+      color: rgba(255,255,255,0.82);
+      font-size: 18px;
+      line-height: 1.65;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 28px;
+    }
+
+    .stage-card {
+      position: relative;
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: var(--radius);
+      padding: 18px;
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      backdrop-filter: blur(10px);
+      overflow: hidden;
+    }
+
+    .stage-card.active {
+      border-color: rgba(255,255,255,0.72);
+      background: rgba(255,255,255,0.18);
+      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.22);
+    }
+
+    .stage-card strong {
+      display: block;
+      font-size: 24px;
+      margin-bottom: 6px;
+      letter-spacing: -0.03em;
+    }
+
+    .stage-card span {
+      color: rgba(255,255,255,0.76);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    main { margin-top: 8px; }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid rgba(226, 232, 240, 0.85);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(255,255,255,0.94);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--line);
+      padding: 18px;
+    }
+
+    .toolbar-row {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr 1fr 1.2fr auto auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    label {
+      display: block;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 7px;
+    }
+
+    input, select, textarea, button {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+      padding: 12px 13px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    }
+
+    textarea {
+      min-height: 92px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+
+    input[readonly], textarea[readonly] {
+      background: #f8fafc;
+      color: #475569;
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: 900;
+      background: var(--bg);
+      color: #fff;
+      border-color: var(--bg);
+      white-space: nowrap;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button.secondary { background: #fff; color: var(--text); border-color: var(--line); }
+    button.blue { background: var(--blue); border-color: var(--blue); }
+    button.green { background: var(--green); border-color: var(--green); }
+
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(120px, 1fr));
+      gap: 10px;
+      padding: 18px;
+      background: var(--panel-soft);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .legend-item {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 12px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+    }
+
+    .legend-item p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 30px;
+      height: 30px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-weight: 900;
+      font-size: 13px;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+
+    .badge.a { color: #475569; background: var(--gray-soft); border-color: #cbd5e1; }
+    .badge.x { color: var(--red); background: var(--red-soft); border-color: #fecaca; }
+    .badge.c { color: var(--blue); background: var(--blue-soft); border-color: #bfdbfe; }
+    .badge.o { color: var(--green); background: var(--green-soft); border-color: #a7f3d0; }
+    .badge.i { color: var(--amber); background: var(--amber-soft); border-color: #fde68a; }
+    .badge.p { color: var(--purple); background: var(--purple-soft); border-color: #ddd6fe; }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 18px;
+      padding: 18px;
+      background: #fff;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(180deg, #fff, #f8fafc);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .card-header h2, .card-header h3 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: -0.02em;
+    }
+
+    .card-header p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding: 16px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 28px;
+      letter-spacing: -0.04em;
+      margin-bottom: 4px;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .progress-shell {
+      height: 12px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 0 16px 16px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--blue), var(--purple));
+      transition: width 0.25s;
+    }
+
+    .form-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      padding: 16px;
+      border-top: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .field-list {
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .section-title {
+      margin: 6px 0 0;
+      color: #3730a3;
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .field-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .field-card.missing {
+      border-color: #fecaca;
+      background: linear-gradient(180deg, #fff, #fff7f7);
+    }
+
+    .field-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .field-title {
+      min-width: 0;
+    }
+
+    .field-title strong {
+      display: block;
+      line-height: 1.35;
+    }
+
+    .field-title span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+      line-height: 1.45;
+    }
+
+    .availability {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border: 1px dashed #f59e0b;
+      background: #fffbeb;
+      border-radius: 12px;
+      color: #92400e;
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .availability input {
+      width: auto;
+      margin: 0;
+      accent-color: var(--amber);
+    }
+
+    .field-card.conditional .availability { display: flex; }
+
+    .field-help {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .side-stack {
+      display: grid;
+      gap: 18px;
+      align-content: start;
+    }
+
+    .timeline {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 70px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: #fff;
+    }
+
+    .timeline-item.active {
+      border-color: #bfdbfe;
+      background: #eff6ff;
+    }
+
+    .timeline-item strong {
+      display: block;
+      font-size: 14px;
+    }
+
+    .timeline-item span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 3px;
+      line-height: 1.4;
+    }
+
+    .preview {
+      padding: 16px;
+    }
+
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      overflow: auto;
+      max-height: 520px;
+      background: #0b1220;
+      color: #dbeafe;
+      border-radius: 16px;
+      padding: 16px;
+      font-size: 12px;
+      line-height: 1.55;
+      border: 1px solid #1e293b;
+    }
+
+    .validation-list {
+      padding: 16px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .notice {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      background: #fff;
+      font-size: 13px;
+      color: #334155;
+      line-height: 1.45;
+    }
+
+    .notice.ok { border-color: #a7f3d0; background: #ecfdf5; color: #065f46; }
+    .notice.warn { border-color: #fde68a; background: #fffbeb; color: #92400e; }
+    .notice.err { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 16px;
+      border-top: 1px solid var(--line);
+      background: #fff;
+    }
+
+
+
+    .step-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 16px;
+      border-top: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .step-actions button[disabled] {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .final-summary {
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .summary-band {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+      padding: 16px;
+    }
+
+    .summary-band h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+      letter-spacing: -0.02em;
+    }
+
+    .summary-kv {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .summary-kv div, .summary-stage-card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .summary-kv span, .summary-stage-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 5px;
+    }
+
+    .summary-kv strong, .summary-stage-card strong {
+      display: block;
+      font-size: 14px;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+
+    .summary-stages {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .summary-stage-card.ok {
+      border-color: #a7f3d0;
+      background: #ecfdf5;
+    }
+
+    .summary-stage-card.warn {
+      border-color: #fde68a;
+      background: #fffbeb;
+    }
+
+    .summary-field-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .summary-field-row {
+      display: grid;
+      grid-template-columns: 72px 1fr;
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      background: #fff;
+      font-size: 13px;
+    }
+
+    .summary-field-row span {
+      color: var(--muted);
+      font-weight: 900;
+    }
+
+    .footer-note {
+      padding: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+      background: #fff;
+      border-top: 1px solid var(--line);
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 1180px) {
+      .toolbar-row { grid-template-columns: 1fr 1fr; }
+      .dashboard { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 880px) {
+      .hero-grid, .legend, .summary-grid, .form-controls, .actions, .step-actions, .summary-kv, .summary-stages { grid-template-columns: 1fr; }
+      .toolbar-row { grid-template-columns: 1fr; }
+      .page { width: min(100% - 20px, 1280px); padding-top: 18px; }
+    }
+
+    @media print {
+      body { background: #fff; }
+      .page { width: 100%; padding: 0; }
+      header { color: #000; padding: 16px; }
+      .subtitle, .stage-card span { color: #333; }
+      .toolbar, .legend, .actions { display: none; }
+      .panel, .card { box-shadow: none; border: 0; border-radius: 0; }
+      .dashboard { display: block; padding: 0; }
+      pre { max-height: none; color: #000; background: #fff; border: 1px solid #ddd; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="eyebrow">CRA notification process · interactive simulator</div>
+      <h1>Notification simulator</h1>
+      <p class="subtitle">
+        Fill the CRA reporting fields, move through the 24h early warning, the 48h readiness checkpoint and the 72h notification, then generate a structured notification preview.
+      </p>
+      <div class="hero-grid" aria-label="Reporting stage overview">
+        <div class="stage-card" data-hero-stage="h24"><strong>24h</strong><span>Early warning with minimum obligatory fields.</span></div>
+        <div class="stage-card" data-hero-stage="h48"><strong>48h</strong><span>Internal preparation checkpoint for the 72h notification.</span></div>
+        <div class="stage-card" data-hero-stage="h72"><strong>72h</strong><span>Notification with general information and initial assessment.</span></div>
+        <div class="stage-card" data-hero-stage="summary"><strong>Summary</strong><span>Final recap of completed stages and remaining gaps.</span></div>
+      </div>
+    </header>
+
+    <main class="panel">
+      <section class="toolbar" aria-label="Simulator controls">
+        <div class="toolbar-row">
+          <div>
+            <label for="notificationType">Notification type</label>
+            <select id="notificationType">
+              <option value="Vulnerability">Vulnerability</option>
+              <option value="Incident">Incident</option>
+            </select>
+          </div>
+          <div>
+            <label for="stageSelect">Simulation stage</label>
+            <select id="stageSelect">
+              <option value="h24">24h · Early warning</option>
+              <option value="h48">48h · Readiness checkpoint</option>
+              <option value="h72">72h · Notification</option>
+              <option value="summary">Final summary</option>
+            </select>
+          </div>
+          <div>
+            <label for="awarenessTime">Awareness time</label>
+            <input id="awarenessTime" type="datetime-local" />
+          </div>
+          <div>
+            <label for="fieldSearch">Search visible fields</label>
+            <input id="fieldSearch" type="search" placeholder="Search by ID or field name…" />
+          </div>
+          <div>
+            <label class="sr-only" for="validateBtn">Validate</label>
+            <button id="validateBtn" class="blue" type="button">Validate</button>
+          </div>
+          <div>
+            <label class="sr-only" for="resetBtn">Reset</label>
+            <button id="resetBtn" class="secondary" type="button">Reset</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="legend" aria-label="Legend">
+        <div class="legend-item"><span class="badge a">A</span><p><strong>Automated</strong><br>Generated by the simulator.</p></div>
+        <div class="legend-item"><span class="badge x">X</span><p><strong>Obligatory</strong><br>Required for the selected stage.</p></div>
+        <div class="legend-item"><span class="badge c">C</span><p><strong>Copied or updated</strong><br>Copied from a previous step, editable.</p></div>
+        <div class="legend-item"><span class="badge p">P</span><p><strong>Prepare</strong><br>Prepare for the 72h notification.</p></div>
+        <div class="legend-item"><span class="badge o">O</span><p><strong>Optional</strong><br>Can be provided when relevant.</p></div>
+        <div class="legend-item"><span class="badge i">I</span><p><strong>If available</strong><br>Required when information is available.</p></div>
+      </section>
+
+      <section class="dashboard">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>Field completion</h2>
+              <p id="formIntro">Complete the fields for the selected stage and notification type.</p>
+            </div>
+            <span id="stageBadge" class="badge x">24h</span>
+          </div>
+
+          <div class="summary-grid" aria-label="Completion summary">
+            <div class="metric"><strong id="mandatoryMetric">0/0</strong><span>Mandatory complete</span></div>
+            <div class="metric"><strong id="conditionalMetric">0/0</strong><span>Available info complete</span></div>
+            <div class="metric"><strong id="preparedMetric">0/0</strong><span>Prepared fields</span></div>
+          </div>
+          <div class="progress-shell" aria-label="Completion progress"><div id="progressBar" class="progress-bar"></div></div>
+
+          <div class="form-controls">
+            <div>
+              <label for="showMode">Show fields</label>
+              <select id="showMode">
+                <option value="all">All visible fields</option>
+                <option value="required">Mandatory / if available</option>
+                <option value="prepared">Prepare or copied fields</option>
+                <option value="optional">Optional fields</option>
+              </select>
+            </div>
+            <div>
+              <label for="includeOptional">Preview content</label>
+              <select id="includeOptional">
+                <option value="filled">Only filled fields</option>
+                <option value="required">Required and filled optional</option>
+                <option value="all">All visible fields</option>
+              </select>
+            </div>
+            <div>
+              <label for="reporterName">Reporter</label>
+              <input id="reporterName" type="text" placeholder="Auto / submitter identity" />
+            </div>
+          </div>
+
+          <div id="fieldList" class="field-list"></div>
+          <div class="step-actions" aria-label="Step navigation">
+            <button id="prevStepBtn" class="secondary" type="button">Previous</button>
+            <button id="nextStepBtn" class="blue" type="button">Next: 48h</button>
+          </div>
+        </div>
+
+        <aside class="side-stack">
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h3>Timeline</h3>
+                <p>Deadlines are simulated from the awareness time.</p>
+              </div>
+            </div>
+            <div class="timeline" id="timeline"></div>
+          </section>
+
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h3>Validation</h3>
+                <p>Missing required fields and readiness gaps are shown here.</p>
+              </div>
+            </div>
+            <div class="validation-list" id="validationList"></div>
+          </section>
+
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h3>Notification preview</h3>
+                <p>Structured payload generated from the current simulation.</p>
+              </div>
+            </div>
+            <div class="preview"><pre id="previewBox"></pre></div>
+            <div class="actions">
+              <button id="copyBtn" class="secondary" type="button">Copy JSON</button>
+              <button id="downloadBtn" class="green" type="button">Download JSON</button>
+            </div>
+          </section>
+        </aside>
+      </section>
+
+      <div class="footer-note">
+        This static HTML simulator has no backend and no external dependency. The 48h step is modelled as an internal readiness checkpoint to prepare the 72h notification, not as a separate formal CRA deadline unless your internal process defines it that way. Version 3.0 includes guided Next navigation and a final summary screen while keeping hardened scroll stability while typing.
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const stageLabels = {
+      h24: "24h · Early warning",
+      h48: "48h · Readiness checkpoint",
+      h72: "72h · Notification",
+      summary: "Final summary"
+    };
+
+    const stageOrder = ["h24", "h48", "h72", "summary"];
+
+    const statusLabels = {
+      A: "Automated",
+      X: "Obligatory",
+      C: "Copied or updated",
+      P: "Prepare for 72h",
+      O: "Optional",
+      I: "Obligatory if available"
+    };
+
+    const fieldDefinitions = [
+      { category: "Common fields", id: "1", key: "notification_type", field: "Notification type", detail: "Vulnerability / Incident", input: "select", options: ["Vulnerability", "Incident"], stages: { h24: "X", h48: "C", h72: "C" } },
+      { category: "Common fields", id: "2", key: "notification_level", field: "Notification level", detail: "24h / 48h / 72h", input: "select", options: ["24h", "48h", "72h"], stages: { h24: "X", h48: "P", h72: "X" } },
+      { category: "Common fields", id: "3", key: "reporting_time_24h", field: "Reporting time - 24h", detail: "Automated reporting timestamp", input: "datetime-local", automated: true, stages: { h24: "A", h48: "A", h72: "A" } },
+      { category: "Common fields", id: "4", key: "reporting_time_72h", field: "Reporting time - 72h", detail: "Automated reporting timestamp", input: "datetime-local", automated: true, stages: { h24: "A", h48: "A", h72: "A" } },
+      { category: "Common fields", id: "5", key: "reporting_time_final", field: "Reporting time - Final", detail: "Automated reporting timestamp, when relevant", input: "text", automated: true, stages: { h24: "A", h48: "A", h72: "A" } },
+      { category: "Common fields", id: "6", key: "reporter", field: "Reporter", detail: "Automated submitter information", input: "text", automated: true, stages: { h24: "A", h48: "A", h72: "A" } },
+      { category: "Common fields", id: "7", key: "manufacturer_name", field: "Name of manufacturer or open-source software steward", detail: "Organisation responsible for the report", input: "text", placeholder: "Example: Acme Security Products", stages: { h24: "X", h48: "C", h72: "C" } },
+      { category: "Common fields", id: "8", key: "product", field: "Product", detail: "Affected product with digital elements", input: "text", placeholder: "Product name, version, build, component…", stages: { h24: "X", h48: "C", h72: "C" } },
+      { category: "Common fields", id: "9", key: "product_type", field: "Product Type", detail: "Default / Important / Critical", input: "select", options: ["", "Default", "Important", "Critical"], stages: { h24: "O", h48: "P", h72: "C" } },
+      { category: "Common fields", id: "10", key: "product_category", field: "Product Category", detail: "If Product Type is other than Default - CRA Annex III / IV", input: "text", placeholder: "CRA Annex III / IV category, if applicable", stages: { h24: "O", h48: "P", h72: "C" } },
+      { category: "Common fields", id: "11", key: "member_states", field: "Member States where product available", detail: "Countries where the product is available", input: "textarea", placeholder: "Example: France, Germany, Spain…", stages: { h24: "I", h48: "I", h72: "C" } },
+      { category: "Common fields", id: "12", key: "title", field: "Title", detail: "Clear title of the vulnerability or incident notification", input: "text", placeholder: "Short notification title", stages: { h24: "X", h48: "C", h72: "C" } },
+
+      { category: "Vulnerability", id: "v13", key: "cve_id", field: "CVE ID", detail: "Common Vulnerabilities and Exposures identifier", input: "text", placeholder: "CVE-YYYY-NNNN", stages: { h24: "O", h48: "P", h72: "C" } },
+      { category: "Vulnerability", id: "v14", key: "euvd_id", field: "EUVD ID", detail: "European Vulnerability Database identifier", input: "text", placeholder: "EUVD identifier, if known", stages: { h24: "O", h48: "P", h72: "C" } },
+      { category: "Vulnerability", id: "v15", key: "vuln_general_information", field: "General information", detail: "General information about the vulnerability", input: "textarea", placeholder: "Summarise the vulnerability and current knowledge…", stages: { h24: "O", h48: "P", h72: "X" } },
+      { category: "Vulnerability", id: "v16", key: "vuln_general_nature", field: "General nature of the vulnerability", detail: "Sub-field of general information", input: "textarea", placeholder: "Example: authentication bypass, remote code execution, privilege escalation…", stages: { h24: "O", h48: "P", h72: "X" } },
+      { category: "Vulnerability", id: "v17", key: "vuln_exploit_nature", field: "General nature of the exploit", detail: "Sub-field of general information", input: "textarea", placeholder: "Explain how exploitation may occur at a high level…", stages: { h24: "O", h48: "P", h72: "X" } },
+      { category: "Vulnerability", id: "v18", key: "vuln_measures_taken", field: "Corrective or mitigating measures taken", detail: "Measures already taken by the reporter", input: "textarea", placeholder: "Patches, mitigations, containment actions already implemented…", stages: { h24: "O", h48: "P", h72: "X" } },
+      { category: "Vulnerability", id: "v19", key: "vuln_user_measures", field: "Corrective or mitigating measures that users can take", detail: "Actions available to users", input: "textarea", placeholder: "Workarounds, configuration changes, updates, compensating controls…", stages: { h24: "O", h48: "P", h72: "X" } },
+      { category: "Vulnerability", id: "v20", key: "vuln_sensitivity", field: "Considered sensitivity of information", detail: "Sensitivity assessment for the information disclosed", input: "textarea", placeholder: "State whether disclosure of details is sensitive and why…", stages: { h24: "O", h48: "I", h72: "I" } },
+      { category: "Vulnerability", id: "v21", key: "vuln_measure_available_date", field: "Date when corrective or mitigating measure has been available", detail: "Date from which the measure is available", input: "date", stages: { h24: "O", h48: "O", h72: "O" } },
+      { category: "Vulnerability", id: "v22", key: "vuln_full_description", field: "Full description of the vulnerability", detail: "Detailed vulnerability description", input: "textarea", placeholder: "Detailed technical and functional description…", stages: { h24: "O", h48: "O", h72: "O" } },
+      { category: "Vulnerability", id: "v23", key: "vuln_severity", field: "Severity of the vulnerability", detail: "Part of the full description", input: "select", options: ["", "Low", "Medium", "High", "Critical"], stages: { h24: "O", h48: "O", h72: "O" } },
+      { category: "Vulnerability", id: "v24", key: "vuln_impact", field: "Impact of the vulnerability", detail: "Part of the full description", input: "textarea", placeholder: "Affected security properties, business impact, affected users…", stages: { h24: "O", h48: "O", h72: "O" } },
+      { category: "Vulnerability", id: "v25", key: "vuln_malicious_actor", field: "Malicious actor that has exploited / is exploiting the vulnerability", detail: "Threat actor information, where available", input: "textarea", placeholder: "Known or suspected malicious actor, if available…", stages: { h24: "O", h48: "O", h72: "O" } },
+      { category: "Vulnerability", id: "v26", key: "vuln_update_details", field: "Details about the security update / corrective measures available", detail: "Patch, update, or corrective measure information", input: "textarea", placeholder: "Patch version, advisory, workaround, release notes…", stages: { h24: "O", h48: "O", h72: "O" } },
+
+      { category: "Incident", id: "i13", key: "incident_malicious_suspected", field: "Incident is suspected by unlawful or malicious acts", detail: "Suspicion that the incident results from unlawful or malicious acts", input: "select", options: ["", "Yes", "No", "Unknown"], stages: { h24: "X", h48: "C", h72: "C" } },
+      { category: "Incident", id: "i14", key: "incident_general_information", field: "General information about the nature of the incident", detail: "General incident context", input: "textarea", placeholder: "Summarise what happened and the current known facts…", stages: { h24: "O", h48: "P", h72: "X" } },
+      { category: "Incident", id: "i15", key: "incident_detected_time", field: "Date and time when the incident was detected", detail: "Detection timestamp", input: "datetime-local", stages: { h24: "O", h48: "P", h72: "X" } },
+      { category: "Incident", id: "i16", key: "incident_occurred_time", field: "Date and time when the incident occurred", detail: "Occurrence timestamp", input: "datetime-local", stages: { h24: "O", h48: "P", h72: "X" } },
+      { category: "Incident", id: "i17", key: "incident_initial_assessment", field: "Initial assessment of the incident", detail: "Initial impact and context assessment", input: "textarea", placeholder: "Initial severity, scope, affected systems, data/functions impacted…", stages: { h24: "O", h48: "P", h72: "X" } },
+      { category: "Incident", id: "i18", key: "incident_measures_taken", field: "Corrective or mitigating measures taken", detail: "Measures already taken by the reporter", input: "textarea", placeholder: "Containment, eradication, recovery, configuration changes…", stages: { h24: "O", h48: "P", h72: "X" } },
+      { category: "Incident", id: "i19", key: "incident_user_measures", field: "Corrective or mitigating measures that users can take", detail: "Actions available to users", input: "textarea", placeholder: "User actions, configuration changes, indicators to monitor…", stages: { h24: "O", h48: "P", h72: "X" } },
+      { category: "Incident", id: "i20", key: "incident_sensitivity", field: "Considered sensitivity of information", detail: "Sensitivity assessment for the information disclosed", input: "textarea", placeholder: "State whether disclosure of details is sensitive and why…", stages: { h24: "O", h48: "I", h72: "I" } },
+      { category: "Incident", id: "i21", key: "incident_severity", field: "Severity of the incident", detail: "Part of the detailed incident description", input: "select", options: ["", "Low", "Medium", "High", "Severe"], stages: { h24: "O", h48: "O", h72: "O" } },
+      { category: "Incident", id: "i22", key: "incident_security_effect", field: "Effect on availability, authenticity, integrity or confidentiality / malicious code", detail: "Whether the incident affects sensitive or important data/functions, or introduces/executes malicious code", input: "textarea", placeholder: "Describe CIA impact and any malicious code introduction/execution…", stages: { h24: "O", h48: "O", h72: "O" } },
+      { category: "Incident", id: "i23", key: "incident_impact", field: "Impact of the incident", detail: "Part of the detailed incident description", input: "textarea", placeholder: "Impact on users, systems, data, functions or operations…", stages: { h24: "O", h48: "O", h72: "O" } },
+      { category: "Incident", id: "i24", key: "incident_threat_or_root_cause", field: "Type of threat or root cause that is likely to have triggered the incident", detail: "Threat type or likely root cause", input: "textarea", placeholder: "Example: credential theft, exploited vulnerability, supply-chain compromise…", stages: { h24: "O", h48: "O", h72: "O" } },
+      { category: "Incident", id: "i25", key: "incident_ongoing_mitigations", field: "Applied and ongoing mitigation measures", detail: "Current and continuing mitigations", input: "textarea", placeholder: "Measures already applied and still in progress…", stages: { h24: "O", h48: "O", h72: "O" } }
+    ];
+
+    const state = {
+      values: {},
+      available: {},
+      lastValidation: []
+    };
+
+    const controls = {
+      notificationType: document.getElementById("notificationType"),
+      stageSelect: document.getElementById("stageSelect"),
+      awarenessTime: document.getElementById("awarenessTime"),
+      fieldSearch: document.getElementById("fieldSearch"),
+      showMode: document.getElementById("showMode"),
+      includeOptional: document.getElementById("includeOptional"),
+      reporterName: document.getElementById("reporterName"),
+      fieldList: document.getElementById("fieldList"),
+      timeline: document.getElementById("timeline"),
+      validationList: document.getElementById("validationList"),
+      previewBox: document.getElementById("previewBox"),
+      progressBar: document.getElementById("progressBar"),
+      mandatoryMetric: document.getElementById("mandatoryMetric"),
+      conditionalMetric: document.getElementById("conditionalMetric"),
+      preparedMetric: document.getElementById("preparedMetric"),
+      stageBadge: document.getElementById("stageBadge"),
+      formIntro: document.getElementById("formIntro"),
+      prevStepBtn: document.getElementById("prevStepBtn"),
+      nextStepBtn: document.getElementById("nextStepBtn")
+    };
+
+    function nowLocalInput() {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      return now.toISOString().slice(0, 16);
+    }
+
+    function addHours(dateString, hours) {
+      const base = dateString ? new Date(dateString) : new Date();
+      if (Number.isNaN(base.getTime())) return "";
+      base.setHours(base.getHours() + hours);
+      const adjusted = new Date(base.getTime() - base.getTimezoneOffset() * 60000);
+      return adjusted.toISOString().slice(0, 16);
+    }
+
+    function prettyDate(value) {
+      if (!value) return "Not set";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return new Intl.DateTimeFormat("en-GB", {
+        year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit"
+      }).format(date);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function currentStage() { return controls.stageSelect.value; }
+    function currentType() { return controls.notificationType.value; }
+    function statusForStage(field, stage) {
+      const effectiveStage = stage === "summary" ? "h72" : stage;
+      return field.stages[effectiveStage];
+    }
+    function statusFor(field) { return statusForStage(field, currentStage()); }
+
+    function statusBadge(code) {
+      return `<span class="badge ${String(code).toLowerCase()}" title="${statusLabels[code]}">${code}</span>`;
+    }
+
+    function isRelevantField(field) {
+      return field.category === "Common fields" || field.category === currentType();
+    }
+
+    function getAutoValue(field) {
+      const awareness = controls.awarenessTime.value;
+      if (field.key === "notification_type") return currentType();
+      if (field.key === "notification_level") return currentStage() === "h24" ? "24h" : currentStage() === "h48" ? "48h" : "72h";
+      if (field.key === "reporting_time_24h") return addHours(awareness, 24);
+      if (field.key === "reporting_time_72h") return addHours(awareness, 72);
+      if (field.key === "reporting_time_final") return "Generated at final report stage";
+      if (field.key === "reporter") return controls.reporterName.value || "Automated submitter identity";
+      return state.values[field.key] || "";
+    }
+
+    function getValue(field) {
+      if (field.automated || ["notification_type", "notification_level"].includes(field.key)) return getAutoValue(field);
+      return state.values[field.key] || "";
+    }
+
+    function captureInteractionState() {
+      const active = document.activeElement;
+      return {
+        x: window.scrollX,
+        y: window.scrollY,
+        activeFieldKey: active?.dataset?.fieldKey || null,
+        activeAvailableKey: active?.dataset?.availableKey || null,
+        activeId: active?.id || null,
+        selectionStart: typeof active?.selectionStart === "number" ? active.selectionStart : null,
+        selectionEnd: typeof active?.selectionEnd === "number" ? active.selectionEnd : null
+      };
+    }
+
+    function restoreInteractionState(snapshot) {
+      if (!snapshot) return;
+
+      const restore = () => {
+        let selector = null;
+        if (snapshot.activeFieldKey) selector = `[data-field-key="${CSS.escape(snapshot.activeFieldKey)}"]`;
+        else if (snapshot.activeAvailableKey) selector = `[data-available-key="${CSS.escape(snapshot.activeAvailableKey)}"]`;
+        else if (snapshot.activeId) selector = `#${CSS.escape(snapshot.activeId)}`;
+
+        if (selector) {
+          const element = document.querySelector(selector);
+          if (element && typeof element.focus === "function") {
+            element.focus({ preventScroll: true });
+            if (snapshot.selectionStart !== null && typeof element.setSelectionRange === "function") {
+              try { element.setSelectionRange(snapshot.selectionStart, snapshot.selectionEnd); } catch (error) {}
+            }
+          }
+        }
+
+        window.scrollTo(snapshot.x, snapshot.y);
+      };
+
+      // Some browsers perform focus scrolling after input/change handlers complete.
+      // Restore immediately and again over the next frames to neutralise that behaviour.
+      restore();
+      requestAnimationFrame(restore);
+      setTimeout(restore, 0);
+      setTimeout(restore, 80);
+    }
+
+    function runWithStableViewport(callback) {
+      const snapshot = captureInteractionState();
+      callback();
+      restoreInteractionState(snapshot);
+    }
+
+    function refreshWithoutRebuildingFields() {
+      // Do not re-render the input list while the user is typing.
+      // Replacing the focused input/textarea on every keystroke can make the page
+      // jump back to the top in some browsers.
+      syncDerivedValues();
+      renderValidation();
+      renderMetrics();
+      renderPreview();
+      saveState();
+    }
+
+    function renderAllPreservingScroll(save = true) {
+      runWithStableViewport(() => renderAll(save));
+    }
+
+    function setValue(key, value) {
+      runWithStableViewport(() => {
+        state.values[key] = value;
+        refreshWithoutRebuildingFields();
+      });
+    }
+
+    function setAvailability(key, checked) {
+      runWithStableViewport(() => {
+        state.available[key] = checked;
+        renderAll(false);
+      });
+    }
+
+    function isMissing(field) {
+      const status = statusFor(field);
+      const value = String(getValue(field)).trim();
+      if (status === "X") return !value;
+      if (status === "I" && state.available[field.key]) return !value;
+      return false;
+    }
+
+    function shouldShowField(field) {
+      if (!isRelevantField(field)) return false;
+      const search = controls.fieldSearch.value.trim().toLowerCase();
+      const status = statusFor(field);
+      const text = [field.id, field.field, field.detail, field.category, field.key].join(" ").toLowerCase();
+      if (search && !text.includes(search)) return false;
+
+      const mode = controls.showMode.value;
+      if (mode === "required" && !["X", "I"].includes(status)) return false;
+      if (mode === "prepared" && !["P", "C"].includes(status)) return false;
+      if (mode === "optional" && status !== "O") return false;
+      return true;
+    }
+
+    function renderInput(field) {
+      const status = statusFor(field);
+      const value = getValue(field);
+      const disabled = field.automated || ["notification_type", "notification_level"].includes(field.key);
+      const readonly = disabled ? "readonly" : "";
+      const placeholder = field.placeholder ? ` placeholder="${escapeHtml(field.placeholder)}"` : "";
+      const data = `data-field-key="${escapeHtml(field.key)}"`;
+
+      if (field.input === "textarea") {
+        return `<textarea ${data} ${readonly}${placeholder}>${escapeHtml(value)}</textarea>`;
+      }
+      if (field.input === "select") {
+        const options = (field.options || []).map(option => {
+          const selected = String(value) === String(option) ? "selected" : "";
+          const label = option || "Select…";
+          return `<option value="${escapeHtml(option)}" ${selected}>${escapeHtml(label)}</option>`;
+        }).join("");
+        const disabledAttr = disabled ? "disabled" : "";
+        return `<select ${data} ${disabledAttr}>${options}</select>`;
+      }
+      const type = field.input || "text";
+      return `<input ${data} type="${type}" value="${escapeHtml(value)}" ${readonly}${placeholder} />`;
+    }
+
+
+    function computeValidationForStage(stage) {
+      const fields = fieldDefinitions.filter(isRelevantField);
+      const missingMandatory = fields.filter(field => statusForStage(field, stage) === "X" && !String(getValue(field)).trim());
+      const missingConditional = fields.filter(field => statusForStage(field, stage) === "I" && state.available[field.key] && !String(getValue(field)).trim());
+      const copiedFields = fields.filter(field => statusForStage(field, stage) === "C");
+      const missingCopied = copiedFields.filter(field => !String(getValue(field)).trim());
+      const prepareFields = fields.filter(field => statusForStage(field, stage) === "P");
+      const missingPrepare = prepareFields.filter(field => !String(getValue(field)).trim());
+      return { missingMandatory, missingConditional, copiedFields, missingCopied, prepareFields, missingPrepare, fields };
+    }
+
+    function renderFinalSummary() {
+      const summaryStages = ["h24", "h48", "h72"].map(stage => {
+        const result = computeValidationForStage(stage);
+        const mandatory = result.fields.filter(field => statusForStage(field, stage) === "X");
+        const mandatoryDone = mandatory.filter(field => String(getValue(field)).trim()).length;
+        const conditional = result.fields.filter(field => statusForStage(field, stage) === "I" && state.available[field.key]);
+        const conditionalDone = conditional.filter(field => String(getValue(field)).trim()).length;
+        const prepareDone = result.prepareFields.filter(field => String(getValue(field)).trim()).length;
+        const blockingMissing = result.missingMandatory.length + result.missingConditional.length;
+        return { stage, result, mandatory, mandatoryDone, conditional, conditionalDone, prepareDone, blockingMissing };
+      });
+
+      const keyFacts = [
+        ["Notification type", currentType()],
+        ["Title", state.values.title || "Not provided"],
+        ["Manufacturer / steward", state.values.manufacturer_name || "Not provided"],
+        ["Product", state.values.product || "Not provided"],
+        ["Reporter", controls.reporterName.value || "Automated submitter identity"],
+        ["Awareness time", prettyDate(controls.awarenessTime.value)],
+        ["24h deadline", prettyDate(addHours(controls.awarenessTime.value, 24))],
+        ["48h checkpoint", prettyDate(addHours(controls.awarenessTime.value, 48))],
+        ["72h deadline", prettyDate(addHours(controls.awarenessTime.value, 72))]
+      ];
+
+      const filledFields = fieldDefinitions
+        .filter(isRelevantField)
+        .filter(field => !field.automated && !["notification_type", "notification_level"].includes(field.key))
+        .filter(field => String(getValue(field)).trim())
+        .map(field => `<div class="summary-field-row"><span>${escapeHtml(field.id)}</span><div><strong>${escapeHtml(field.field)}</strong><br>${escapeHtml(getValue(field))}</div></div>`)
+        .join("");
+
+      const gaps = computeValidationForStage("h72");
+      const blockingGaps = [...gaps.missingMandatory, ...gaps.missingConditional];
+
+      controls.fieldList.innerHTML = `
+        <div class="final-summary">
+          <div class="summary-band">
+            <h3>Final simulation summary</h3>
+            <div class="summary-kv">
+              ${keyFacts.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("")}
+            </div>
+          </div>
+
+          <div class="summary-band">
+            <h3>Stage readiness</h3>
+            <div class="summary-stages">
+              ${summaryStages.map(item => `
+                <div class="summary-stage-card ${item.blockingMissing ? "warn" : "ok"}">
+                  <span>${escapeHtml(stageLabels[item.stage])}</span>
+                  <strong>${item.blockingMissing ? `${item.blockingMissing} blocking gap(s)` : "Ready"}</strong>
+                  <div class="field-help">Mandatory: ${item.mandatoryDone}/${item.mandatory.length} · If available: ${item.conditionalDone}/${item.conditional.length}${item.stage === "h48" ? ` · Prepared: ${item.prepareDone}/${item.result.prepareFields.length}` : ""}</div>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+
+          <div class="summary-band">
+            <h3>Remaining 72h blocking gaps</h3>
+            ${blockingGaps.length ? `<div class="notice err">${blockingGaps.map(f => `${escapeHtml(f.id)} · ${escapeHtml(f.field)}`).join("<br>")}</div>` : `<div class="notice ok"><strong>No blocking 72h gaps.</strong><br>The 72h notification is ready based on the currently marked available information.</div>`}
+          </div>
+
+          <div class="summary-band">
+            <h3>Filled business fields</h3>
+            <div class="summary-field-list">${filledFields || `<div class="notice warn">No manually filled business fields yet.</div>`}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderFields() {
+      if (currentStage() === "summary") {
+        renderFinalSummary();
+        return;
+      }
+      const visible = fieldDefinitions.filter(shouldShowField);
+      let html = "";
+      let lastCategory = "";
+
+      visible.forEach(field => {
+        const status = statusFor(field);
+        const missing = isMissing(field);
+        const conditional = status === "I";
+        if (field.category !== lastCategory) {
+          html += `<div class="section-title">${escapeHtml(field.category)}</div>`;
+          lastCategory = field.category;
+        }
+        html += `
+          <article class="field-card ${missing ? "missing" : ""} ${conditional ? "conditional" : ""}" data-card-key="${escapeHtml(field.key)}">
+            <div class="field-top">
+              <div class="field-title">
+                <strong>${escapeHtml(field.id)} · ${escapeHtml(field.field)}</strong>
+                <span>${escapeHtml(field.detail)}</span>
+              </div>
+              ${statusBadge(status)}
+            </div>
+            <label class="availability"><input type="checkbox" data-available-key="${escapeHtml(field.key)}" ${state.available[field.key] ? "checked" : ""}> Information is available, make this field required</label>
+            ${renderInput(field)}
+            <div class="field-help">${escapeHtml(statusLabels[status])}${field.automated ? " · This value is generated by the simulator." : ""}${missing ? " · Missing required value." : ""}</div>
+          </article>
+        `;
+      });
+
+      if (!visible.length) {
+        html = `<div class="notice warn">No field matches the current filters.</div>`;
+      }
+
+      controls.fieldList.innerHTML = html;
+
+      controls.fieldList.querySelectorAll("input[data-field-key], textarea[data-field-key], select[data-field-key]").forEach(input => {
+        if (input.disabled || input.readOnly) return;
+        input.addEventListener("input", event => setValue(event.target.dataset.fieldKey, event.target.value));
+        if (input.tagName === "SELECT" || input.type === "date" || input.type === "datetime-local") {
+          input.addEventListener("change", event => setValue(event.target.dataset.fieldKey, event.target.value));
+        }
+      });
+
+      controls.fieldList.querySelectorAll("input[data-available-key]").forEach(input => {
+        input.addEventListener("change", event => setAvailability(event.target.dataset.availableKey, event.target.checked));
+      });
+    }
+
+    function computeValidation() {
+      return computeValidationForStage(currentStage());
+    }
+
+    function renderValidation() {
+      const result = computeValidation();
+      const notices = [];
+
+      if (!result.missingMandatory.length && !result.missingConditional.length) {
+        notices.push(`<div class="notice ok"><strong>Ready for ${stageLabels[currentStage()]}.</strong><br>All mandatory fields for the selected stage are complete.</div>`);
+      } else {
+        if (result.missingMandatory.length) {
+          notices.push(`<div class="notice err"><strong>Missing obligatory fields:</strong><br>${result.missingMandatory.map(f => `${escapeHtml(f.id)} · ${escapeHtml(f.field)}`).join("<br>")}</div>`);
+        }
+        if (result.missingConditional.length) {
+          notices.push(`<div class="notice err"><strong>Missing fields marked as available:</strong><br>${result.missingConditional.map(f => `${escapeHtml(f.id)} · ${escapeHtml(f.field)}`).join("<br>")}</div>`);
+        }
+      }
+
+      if (result.missingCopied.length) {
+        notices.push(`<div class="notice warn"><strong>Copied / updated fields without value:</strong><br>${result.missingCopied.map(f => `${escapeHtml(f.id)} · ${escapeHtml(f.field)}`).join("<br>")}</div>`);
+      }
+
+      if (currentStage() === "h48") {
+        if (result.missingPrepare.length) {
+          notices.push(`<div class="notice warn"><strong>48h readiness gaps:</strong><br>${result.missingPrepare.map(f => `${escapeHtml(f.id)} · ${escapeHtml(f.field)}`).join("<br>")}</div>`);
+        } else {
+          notices.push(`<div class="notice ok"><strong>72h preparation looks complete.</strong><br>All fields marked “Prepare” have a value.</div>`);
+        }
+      }
+
+      controls.validationList.innerHTML = notices.join("");
+    }
+
+    function renderMetrics() {
+      const result = computeValidation();
+      const mandatoryFields = result.fields.filter(field => statusFor(field) === "X");
+      const mandatoryCompleted = mandatoryFields.filter(field => String(getValue(field)).trim()).length;
+      const conditionalFields = result.fields.filter(field => statusFor(field) === "I" && state.available[field.key]);
+      const conditionalCompleted = conditionalFields.filter(field => String(getValue(field)).trim()).length;
+      const preparedCompleted = result.prepareFields.filter(field => String(getValue(field)).trim()).length;
+
+      controls.mandatoryMetric.textContent = `${mandatoryCompleted}/${mandatoryFields.length}`;
+      controls.conditionalMetric.textContent = `${conditionalCompleted}/${conditionalFields.length}`;
+      controls.preparedMetric.textContent = `${preparedCompleted}/${result.prepareFields.length}`;
+
+      const totalBlocking = mandatoryFields.length + conditionalFields.length;
+      const completeBlocking = mandatoryCompleted + conditionalCompleted;
+      const progress = totalBlocking ? Math.round((completeBlocking / totalBlocking) * 100) : 100;
+      controls.progressBar.style.width = `${progress}%`;
+    }
+
+    function renderTimeline() {
+      const awareness = controls.awarenessTime.value;
+      const items = [
+        { key: "h24", title: "24h early warning", value: addHours(awareness, 24), text: "Minimum obligatory fields and early warning content." },
+        { key: "h48", title: "48h readiness checkpoint", value: addHours(awareness, 48), text: "Internal checkpoint to prepare the 72h notification." },
+        { key: "h72", title: "72h notification", value: addHours(awareness, 72), text: "General information and initial assessment fields." },
+        { key: "summary", title: "Final summary", value: nowLocalInput(), text: "Consolidated view of completed stages and remaining gaps." }
+      ];
+
+      controls.timeline.innerHTML = items.map(item => `
+        <div class="timeline-item ${item.key === currentStage() ? "active" : ""}">
+          <span class="badge ${item.key === currentStage() ? (item.key === "summary" ? "a" : "x") : "c"}">${item.key === "summary" ? "✓" : item.key.replace("h", "") + "h"}</span>
+          <div><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(prettyDate(item.value))}</span><span>${escapeHtml(item.text)}</span></div>
+        </div>
+      `).join("");
+    }
+
+    function shouldIncludeInPreview(field) {
+      if (!isRelevantField(field)) return false;
+      const status = statusFor(field);
+      const value = String(getValue(field)).trim();
+      const mode = controls.includeOptional.value;
+
+      if (mode === "all") return true;
+      if (mode === "filled") return Boolean(value);
+      if (mode === "required") return ["X", "I", "A", "C", "P"].includes(status) || Boolean(value);
+      return Boolean(value);
+    }
+
+    function generatePayload() {
+      const result = computeValidation();
+      const fields = fieldDefinitions.filter(shouldIncludeInPreview).map(field => ({
+        id: field.id,
+        category: field.category,
+        field: field.field,
+        status: statusFor(field),
+        statusLabel: statusLabels[statusFor(field)],
+        value: getValue(field)
+      }));
+
+      return {
+        simulation: {
+          notificationType: currentType(),
+          stage: stageLabels[currentStage()],
+          awarenessTime: controls.awarenessTime.value,
+          deadline24h: addHours(controls.awarenessTime.value, 24),
+          checkpoint48h: addHours(controls.awarenessTime.value, 48),
+          deadline72h: addHours(controls.awarenessTime.value, 72),
+          generatedAt: new Date().toISOString()
+        },
+        validation: {
+          readyForSelectedStage: result.missingMandatory.length === 0 && result.missingConditional.length === 0,
+          missingObligatoryFields: result.missingMandatory.map(field => `${field.id} · ${field.field}`),
+          missingAvailableInformationFields: result.missingConditional.map(field => `${field.id} · ${field.field}`),
+          copiedOrUpdatedFieldsWithoutValue: result.missingCopied.map(field => `${field.id} · ${field.field}`),
+          readinessGaps48h: currentStage() === "h48" ? result.missingPrepare.map(field => `${field.id} · ${field.field}`) : []
+        },
+        fields
+      };
+    }
+
+    function renderPreview() {
+      controls.previewBox.textContent = JSON.stringify(generatePayload(), null, 2);
+    }
+
+    function renderHeaderState() {
+      const stage = currentStage();
+      controls.stageBadge.textContent = stage === "h24" ? "24h" : stage === "h48" ? "48h" : stage === "h72" ? "72h" : "Summary";
+      controls.stageBadge.className = `badge ${stage === "h48" ? "p" : stage === "summary" ? "a" : "x"}`;
+      controls.formIntro.textContent = stage === "summary"
+        ? `Final summary for the ${currentType().toLowerCase()} simulation.`
+        : `${stageLabels[stage]} for a ${currentType().toLowerCase()} notification.`;
+      document.querySelectorAll("[data-hero-stage]").forEach(card => {
+        card.classList.toggle("active", card.dataset.heroStage === stage);
+      });
+      updateStepButtons();
+    }
+
+    function syncDerivedValues() {
+      state.values.notification_type = currentType();
+      state.values.notification_level = currentStage() === "h24" ? "24h" : currentStage() === "h48" ? "48h" : "72h";
+      state.values.reporting_time_24h = addHours(controls.awarenessTime.value, 24);
+      state.values.reporting_time_72h = addHours(controls.awarenessTime.value, 72);
+      state.values.reporting_time_final = "Generated at final report stage";
+      state.values.reporter = controls.reporterName.value || "Automated submitter identity";
+    }
+
+
+    function updateStepButtons() {
+      const index = stageOrder.indexOf(currentStage());
+      const previous = stageOrder[index - 1];
+      const next = stageOrder[index + 1];
+      controls.prevStepBtn.disabled = !previous;
+      controls.prevStepBtn.textContent = previous ? `Previous: ${stageLabels[previous]}` : "Previous";
+      controls.nextStepBtn.disabled = !next;
+      controls.nextStepBtn.textContent = next ? (next === "summary" ? "Generate final summary" : `Next: ${stageLabels[next]}`) : "Summary complete";
+    }
+
+    function scrollToFormTop() {
+      const card = document.querySelector(".dashboard .card");
+      if (card) card.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function goToStage(stage, shouldScroll = true) {
+      controls.stageSelect.value = stage;
+      renderAll();
+      if (shouldScroll) setTimeout(scrollToFormTop, 0);
+    }
+
+    function moveStep(direction) {
+      const index = stageOrder.indexOf(currentStage());
+      const target = stageOrder[index + direction];
+      if (!target) return;
+
+      if (direction > 0 && currentStage() !== "summary") {
+        const result = computeValidation();
+        const firstMissing = [...result.missingMandatory, ...result.missingConditional][0];
+        if (firstMissing) {
+          renderAll();
+          const card = document.querySelector(`[data-card-key="${CSS.escape(firstMissing.key)}"]`);
+          if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });
+          return;
+        }
+      }
+
+      goToStage(target);
+    }
+
+    function renderAll(save = true) {
+      syncDerivedValues();
+      renderHeaderState();
+      renderTimeline();
+      renderFields();
+      renderValidation();
+      renderMetrics();
+      renderPreview();
+      if (save) saveState();
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem("cra-notification-simulator", JSON.stringify({
+          values: state.values,
+          available: state.available,
+          controls: {
+            notificationType: controls.notificationType.value,
+            stageSelect: controls.stageSelect.value,
+            awarenessTime: controls.awarenessTime.value,
+            reporterName: controls.reporterName.value,
+            includeOptional: controls.includeOptional.value,
+            showMode: controls.showMode.value
+          }
+        }));
+      } catch (error) {
+        console.warn("Could not save simulator state", error);
+      }
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem("cra-notification-simulator");
+        if (!raw) return false;
+        const saved = JSON.parse(raw);
+        Object.assign(state.values, saved.values || {});
+        Object.assign(state.available, saved.available || {});
+        if (saved.controls) {
+          controls.notificationType.value = saved.controls.notificationType || "Vulnerability";
+          controls.stageSelect.value = saved.controls.stageSelect || "h24";
+          controls.awarenessTime.value = saved.controls.awarenessTime || nowLocalInput();
+          controls.reporterName.value = saved.controls.reporterName || "";
+          controls.includeOptional.value = saved.controls.includeOptional || "filled";
+          controls.showMode.value = saved.controls.showMode || "all";
+        }
+        return true;
+      } catch (error) {
+        console.warn("Could not load simulator state", error);
+        return false;
+      }
+    }
+
+    function resetSimulator() {
+      localStorage.removeItem("cra-notification-simulator");
+      state.values = {};
+      state.available = {};
+      controls.notificationType.value = "Vulnerability";
+      controls.stageSelect.value = "h24";
+      controls.awarenessTime.value = nowLocalInput();
+      controls.fieldSearch.value = "";
+      controls.showMode.value = "all";
+      controls.includeOptional.value = "filled";
+      controls.reporterName.value = "";
+      renderAll();
+    }
+
+    function copyPreview() {
+      const text = controls.previewBox.textContent;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          controls.copyBtn.textContent = "Copied";
+          setTimeout(() => controls.copyBtn.textContent = "Copy JSON", 1200);
+        });
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      }
+    }
+
+    function downloadPreview() {
+      const payload = JSON.stringify(generatePayload(), null, 2);
+      const blob = new Blob([payload], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const stage = currentStage() === "summary" ? "final-summary" : `${currentStage().replace("h", "")}h`;
+      link.href = url;
+      link.download = `cra-${currentType().toLowerCase()}-${stage}-notification.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function validateAndFocus() {
+      renderAll();
+      if (currentStage() === "summary") return;
+      const result = computeValidation();
+      const firstMissing = [...result.missingMandatory, ...result.missingConditional][0];
+      if (firstMissing) {
+        const card = document.querySelector(`[data-card-key="${CSS.escape(firstMissing.key)}"]`);
+        if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }
+
+    // Controls that change field visibility need a full render; text controls update
+    // in a stable viewport so typing never pushes the user back to the top.
+    [controls.notificationType, controls.stageSelect, controls.showMode, controls.includeOptional].forEach(control => {
+      control.addEventListener("change", () => renderAllPreservingScroll());
+    });
+
+    [controls.awarenessTime, controls.fieldSearch, controls.reporterName].forEach(control => {
+      control.addEventListener("input", () => renderAllPreservingScroll());
+      control.addEventListener("change", () => renderAllPreservingScroll());
+    });
+
+    document.getElementById("validateBtn").addEventListener("click", validateAndFocus);
+    document.getElementById("resetBtn").addEventListener("click", resetSimulator);
+    controls.copyBtn = document.getElementById("copyBtn");
+    controls.downloadBtn = document.getElementById("downloadBtn");
+    controls.copyBtn.addEventListener("click", copyPreview);
+    controls.downloadBtn.addEventListener("click", downloadPreview);
+    controls.prevStepBtn.addEventListener("click", () => moveStep(-1));
+    controls.nextStepBtn.addEventListener("click", () => moveStep(1));
+
+    if (!loadState()) {
+      controls.awarenessTime.value = nowLocalInput();
+    }
+    renderAll();
+  </script>
+</body>
+</html>
