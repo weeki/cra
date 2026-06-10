@@ -522,7 +522,7 @@
 
     .step-actions {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 12px;
       padding: 16px;
       border-top: 1px solid var(--line);
@@ -682,7 +682,7 @@
     </header>
 
     <main class="panel">
-      <section class="toolbar" aria-label="Simulator controls">
+      <section class="toolbar" aria-label="Internal simulator controls" hidden>
         <div class="toolbar-row">
           <div>
             <label for="notificationType">Notification type</label>
@@ -772,6 +772,7 @@
           <div id="fieldList" class="field-list"></div>
           <div class="step-actions" aria-label="Step navigation">
             <button id="prevStepBtn" class="secondary" type="button">Previous</button>
+            <button id="clearFieldsBtn" class="secondary" type="button">Reset fields</button>
             <button id="nextStepBtn" class="blue" type="button">Next: 48h</button>
           </div>
         </div>
@@ -814,7 +815,7 @@
       </section>
 
       <div class="footer-note">
-        This static HTML simulator has no backend and no external dependency. The 48h step is modelled as an internal readiness checkpoint to prepare the 72h notification, not as a separate formal CRA deadline unless your internal process defines it that way. Version 3.0 includes guided Next navigation and a final summary screen while keeping hardened scroll stability while typing.
+        This static HTML simulator has no backend and no external dependency. The 48h step is modelled as an internal readiness checkpoint to prepare the 72h notification, not as a separate formal CRA deadline unless your internal process defines it that way. Version 5.0 includes guided Next navigation, field-level notification type selection, a final summary screen, a visible full reset action, and hardened scroll stability while typing.
       </div>
     </main>
   </div>
@@ -839,7 +840,7 @@
     };
 
     const fieldDefinitions = [
-      { category: "Common fields", id: "1", key: "notification_type", field: "Notification type", detail: "Vulnerability / Incident", input: "select", options: ["Vulnerability", "Incident"], stages: { h24: "X", h48: "C", h72: "C" } },
+      { category: "Common fields", id: "1", key: "notification_type", field: "Notification type", detail: "Select Vulnerability or Incident", input: "select", options: ["Vulnerability", "Incident"], stages: { h24: "X", h48: "C", h72: "C" } },
       { category: "Common fields", id: "2", key: "notification_level", field: "Notification level", detail: "24h / 48h / 72h", input: "select", options: ["24h", "48h", "72h"], stages: { h24: "X", h48: "P", h72: "X" } },
       { category: "Common fields", id: "3", key: "reporting_time_24h", field: "Reporting time - 24h", detail: "Automated reporting timestamp", input: "datetime-local", automated: true, stages: { h24: "A", h48: "A", h72: "A" } },
       { category: "Common fields", id: "4", key: "reporting_time_72h", field: "Reporting time - 72h", detail: "Automated reporting timestamp", input: "datetime-local", automated: true, stages: { h24: "A", h48: "A", h72: "A" } },
@@ -907,6 +908,7 @@
       stageBadge: document.getElementById("stageBadge"),
       formIntro: document.getElementById("formIntro"),
       prevStepBtn: document.getElementById("prevStepBtn"),
+      clearFieldsBtn: document.getElementById("clearFieldsBtn"),
       nextStepBtn: document.getElementById("nextStepBtn")
     };
 
@@ -943,7 +945,7 @@
     }
 
     function currentStage() { return controls.stageSelect.value; }
-    function currentType() { return controls.notificationType.value; }
+    function currentType() { return state.values.notification_type || controls.notificationType.value || "Vulnerability"; }
     function statusForStage(field, stage) {
       const effectiveStage = stage === "summary" ? "h72" : stage;
       return field.stages[effectiveStage];
@@ -960,7 +962,7 @@
 
     function getAutoValue(field) {
       const awareness = controls.awarenessTime.value;
-      if (field.key === "notification_type") return currentType();
+      if (field.key === "notification_type") return state.values.notification_type || controls.notificationType.value || "Vulnerability";
       if (field.key === "notification_level") return currentStage() === "h24" ? "24h" : currentStage() === "h48" ? "48h" : "72h";
       if (field.key === "reporting_time_24h") return addHours(awareness, 24);
       if (field.key === "reporting_time_72h") return addHours(awareness, 72);
@@ -970,7 +972,8 @@
     }
 
     function getValue(field) {
-      if (field.automated || ["notification_type", "notification_level"].includes(field.key)) return getAutoValue(field);
+      if (field.automated || field.key === "notification_level") return getAutoValue(field);
+      if (field.key === "notification_type") return state.values.notification_type || controls.notificationType.value || "Vulnerability";
       return state.values[field.key] || "";
     }
 
@@ -1041,7 +1044,12 @@
     function setValue(key, value) {
       runWithStableViewport(() => {
         state.values[key] = value;
-        refreshWithoutRebuildingFields();
+        if (key === "notification_type") {
+          controls.notificationType.value = value || "Vulnerability";
+          renderAll(false);
+        } else {
+          refreshWithoutRebuildingFields();
+        }
       });
     }
 
@@ -1077,7 +1085,7 @@
     function renderInput(field) {
       const status = statusFor(field);
       const value = getValue(field);
-      const disabled = field.automated || ["notification_type", "notification_level"].includes(field.key);
+      const disabled = field.automated || field.key === "notification_level";
       const readonly = disabled ? "readonly" : "";
       const placeholder = field.placeholder ? ` placeholder="${escapeHtml(field.placeholder)}"` : "";
       const data = `data-field-key="${escapeHtml(field.key)}"`;
@@ -1362,7 +1370,8 @@
     }
 
     function syncDerivedValues() {
-      state.values.notification_type = currentType();
+      if (!state.values.notification_type) state.values.notification_type = controls.notificationType.value || "Vulnerability";
+      controls.notificationType.value = state.values.notification_type;
       state.values.notification_level = currentStage() === "h24" ? "24h" : currentStage() === "h48" ? "48h" : "72h";
       state.values.reporting_time_24h = addHours(controls.awarenessTime.value, 24);
       state.values.reporting_time_72h = addHours(controls.awarenessTime.value, 72);
@@ -1428,7 +1437,7 @@
           values: state.values,
           available: state.available,
           controls: {
-            notificationType: controls.notificationType.value,
+            notificationType: currentType(),
             stageSelect: controls.stageSelect.value,
             awarenessTime: controls.awarenessTime.value,
             reporterName: controls.reporterName.value,
@@ -1449,7 +1458,9 @@
         Object.assign(state.values, saved.values || {});
         Object.assign(state.available, saved.available || {});
         if (saved.controls) {
-          controls.notificationType.value = saved.controls.notificationType || "Vulnerability";
+          const savedType = saved.values?.notification_type || saved.controls.notificationType || "Vulnerability";
+          state.values.notification_type = savedType;
+          controls.notificationType.value = savedType;
           controls.stageSelect.value = saved.controls.stageSelect || "h24";
           controls.awarenessTime.value = saved.controls.awarenessTime || nowLocalInput();
           controls.reporterName.value = saved.controls.reporterName || "";
@@ -1463,10 +1474,23 @@
       }
     }
 
-    function resetSimulator() {
+    function hasUserEnteredData() {
+      return Object.entries(state.values).some(([key, value]) => {
+        if (["notification_type", "notification_level", "reporting_time_24h", "reporting_time_72h", "reporting_time_final", "reporter"].includes(key)) return false;
+        return String(value || "").trim() !== "";
+      }) || Object.values(state.available).some(Boolean) || String(controls.reporterName.value || "").trim() !== "";
+    }
+
+    function resetSimulator(event) {
+      if (event && event.preventDefault) event.preventDefault();
+      if (hasUserEnteredData()) {
+        const confirmed = window.confirm("Reset all fields and restart the simulation from 24h?");
+        if (!confirmed) return;
+      }
       localStorage.removeItem("cra-notification-simulator");
-      state.values = {};
+      state.values = { notification_type: "Vulnerability" };
       state.available = {};
+      state.lastValidation = [];
       controls.notificationType.value = "Vulnerability";
       controls.stageSelect.value = "h24";
       controls.awarenessTime.value = nowLocalInput();
@@ -1474,7 +1498,10 @@
       controls.showMode.value = "all";
       controls.includeOptional.value = "filled";
       controls.reporterName.value = "";
-      renderAll();
+      renderAll(false);
+      saveState();
+      controls.validationList.innerHTML = `<div class="notice ok"><strong>Reset complete.</strong><br>All manually entered fields have been cleared and the simulation has restarted at 24h.</div>`;
+      setTimeout(scrollToFormTop, 0);
     }
 
     function copyPreview() {
@@ -1521,7 +1548,7 @@
 
     // Controls that change field visibility need a full render; text controls update
     // in a stable viewport so typing never pushes the user back to the top.
-    [controls.notificationType, controls.stageSelect, controls.showMode, controls.includeOptional].forEach(control => {
+    [controls.stageSelect, controls.showMode, controls.includeOptional].forEach(control => {
       control.addEventListener("change", () => renderAllPreservingScroll());
     });
 
@@ -1532,6 +1559,7 @@
 
     document.getElementById("validateBtn").addEventListener("click", validateAndFocus);
     document.getElementById("resetBtn").addEventListener("click", resetSimulator);
+    controls.clearFieldsBtn.addEventListener("click", resetSimulator);
     controls.copyBtn = document.getElementById("copyBtn");
     controls.downloadBtn = document.getElementById("downloadBtn");
     controls.copyBtn.addEventListener("click", copyPreview);
